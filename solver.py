@@ -9,6 +9,7 @@ if __name__ == "__main__":
     cplex_obj = cp.Cplex()
     max_k = 5
     net = net_graph()
+    net.draw_graph()
 
     paths = dict()
     x = dict()
@@ -27,9 +28,6 @@ if __name__ == "__main__":
     # add objective function
     utility = cplex_obj.variables.add(names=["utility"], types=['C'], lb=[0], ub=[1])
 
-    # set optimization direction
-    cplex_obj.objective.set_sense(cplex_obj.objective.sense.minimize)
-
     # record edges to their corresponding paths
     edge2paths = dict()
     for src, dst in paths:
@@ -41,6 +39,19 @@ if __name__ == "__main__":
                     edge2paths[(path[node_index], path[node_index + 1])] = list() 
                 edge2paths[(path[node_index], path[node_index + 1])].append((src, dst, path_id))
 
+    delta = dict() 
+    for node in net.link_capacity:
+        for node_adj in net.link_capacity[node]:
+            delta[(node, node_adj)] = dict()
+            for src in net.flow:
+                for des in net.flow[src]:
+                    for path_id in paths[(src, des)]:
+                        delta[(node, node_adj)][(src, des, path_id)] = 0
+            if (node, node_adj) in edge2paths:
+                for src, des, path_id in edge2paths[(node, node_adj)]:
+                    delta[(node, node_adj)][(src, des, path_id)] = 1
+
+
     # add flow constraints
     for src in net.flow:
         for dst in net.flow[src]: 
@@ -50,19 +61,39 @@ if __name__ == "__main__":
             # cplex_obj.linear_constraints.add(lin_expr=[sum(x["source:{}_destination:{}_p{}".format(src, dst, i + 1)] for i in range(max_k))], senses=['E'], rhs=[1])
 
     # add edge capacity constraints
-    for node1, node2 in edge2paths:
-        name_list = list()
-        for src, des, path_no in edge2paths[(node1, node2)]:
-            name_list.append(("source:{}_destination:{}_p{}".format(src, des, path_no + 1), src, des))
-        # if (node2, node1) in edge2paths:
-        #     for src, des, path_no in edge2paths[(node2, node1)]:
-        #         name_list.append(("source:{}_destination:{}_p{}".format(src, des, path_no + 1), src, des))
-        if name_list is not None:
-            cplex_obj.linear_constraints.add(lin_expr=[[[name[0] for name in name_list],[net.flow[name[1]][name[2]] for name in name_list]]], 
-                                             senses=['L'], rhs=[net.link_capacity[node1][node2]])
-            cplex_obj.linear_constraints.add(lin_expr=[[[name[0] for name in name_list]+['utility'],[net.flow[name[1]][name[2]]/net.link_capacity[node1][node2] for name in name_list]+[-1]]],
-                                             senses=['L'], rhs=[0])
-        
+    for node in net.link_capacity:
+        for node_adj in net.link_capacity[node]:
+            lin_expr_vars = [name for name in x.keys()]
+            lin_expr_coeffs = []
+            lin_expr_coeffs_2 = []
+            for src in net.flow:
+                for des in net.flow[src]:
+                    for i in range(max_k):
+                        lin_expr_coeffs = lin_expr_coeffs + [delta[(node, node_adj)][(src, des, i)]*net.flow[src][des]]
+                        lin_expr_coeffs_2 = lin_expr_coeffs_2 + [delta[(node, node_adj)][(src, des, i)]*net.flow[src][des]/net.link_capacity[node][node_adj]]
+            cplex_obj.linear_constraints.add(lin_expr=[[lin_expr_vars, lin_expr_coeffs]], 
+                                                senses=['L'], rhs=[net.link_capacity[node][node_adj]])
+            cplex_obj.linear_constraints.add(lin_expr=[[lin_expr_vars+['utility'], lin_expr_coeffs_2 +[-1]]],
+                                                senses=['L'], rhs=[0])
+
+    # # add edge capacity constraints
+    # for node1, node2 in edge2paths:
+    #     name_list = list()
+    #     for src, des, path_no in edge2paths[(node1, node2)]:
+    #         name_list.append(("source:{}_destination:{}_p{}".format(src, des, path_no + 1), src, des))
+    #     # if (node2, node1) in edge2paths:
+    #     #     for src, des, path_no in edge2paths[(node2, node1)]:
+    #     #         name_list.append(("source:{}_destination:{}_p{}".format(src, des, path_no + 1), src, des))
+    #     if name_list is not None:
+    #         cplex_obj.linear_constraints.add(lin_expr=[[[name[0] for name in name_list],[net.flow[name[1]][name[2]] for name in name_list]]], 
+    #                                          senses=['L'], rhs=[net.link_capacity[node1][node2]])
+    #         cplex_obj.linear_constraints.add(lin_expr=[[[name[0] for name in name_list]+['utility'],[net.flow[name[1]][name[2]]/net.link_capacity[node1][node2] for name in name_list]+[-1]]],
+    #                                          senses=['L'], rhs=[0])
+
+    
+    # set optimization direction
+    cplex_obj.objective.set_sense(cplex_obj.objective.sense.minimize)
+
     cplex_obj.objective.set_linear([('utility', 1.0)]) 
 
     # get the solution time

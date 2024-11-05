@@ -8,6 +8,7 @@ if __name__ == "__main__":
     cplex_obj = cp.Cplex()
     max_k = 5
     net = net_graph()
+    net.draw_graph()
     paths = dict()
 
     # add variables
@@ -98,8 +99,8 @@ if __name__ == "__main__":
     cplex_obj.solve() 
     
     script_dir = os.path.dirname(os.path.abspath(__file__))
-    file_path = os.path.join(script_dir, "model.lp")
-    cplex_obj.write("model.lp")
+    file_path = os.path.join(script_dir, "model_dual.lp")
+    cplex_obj.write("model_dual.lp")
 
     solve_time = cplex_obj.get_time() - start_time  
 
