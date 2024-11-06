@@ -6,7 +6,7 @@ from Network_Topology import *
 if __name__ == "__main__":
     # create cplex objective 
     cplex_obj = cp.Cplex()
-    max_k = 5
+    max_k = 3
     net = net_graph()
     net.draw_graph()
     paths = dict()
@@ -20,9 +20,6 @@ if __name__ == "__main__":
             n_name.append(name)
             n[name] = cplex_obj.variables.add(names=[name], types=['C'], lb=[0])
 
-    # print(n)
-    # print(len(n))
-
     m = dict()
     m_name = []
     for src in net.flow:
@@ -31,10 +28,7 @@ if __name__ == "__main__":
             name = "source:{}_destination:{}".format(src, des)
             m_name.append(name)
             m[name] = cplex_obj.variables.add(names=[name], types=['C'])
-
-    # print(m)
-    # print(len(m))
-    
+  
     # record edges to their corresponding paths
     edge2paths = dict()
     for src, des in paths:
@@ -45,9 +39,6 @@ if __name__ == "__main__":
                 if (path[node_index], path[node_index + 1]) not in edge2paths:
                     edge2paths[(path[node_index], path[node_index + 1])] = list()
                 edge2paths[(path[node_index], path[node_index + 1])].append((src, des, path_id))
-
-    # print(edge2paths.keys())
-    # print(len(edge2paths.keys()))
    
     delta = dict() 
     for node in net.link_capacity:
@@ -60,10 +51,6 @@ if __name__ == "__main__":
             if (node, node_adj) in edge2paths:
                 for src, des, path_id in edge2paths[(node, node_adj)]:
                     delta[(node, node_adj)][(src, des, path_id)] = 1
-
-    # print(delta)
-    # print(len(delta))        
-    # print(len(delta[('Copenhagen', 'London')]))
 
     # add constraints
     '''Constraint 1'''

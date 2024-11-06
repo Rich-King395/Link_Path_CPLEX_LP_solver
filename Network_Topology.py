@@ -1,8 +1,10 @@
+
 import random
 import copy
 import networkx as nx
 import matplotlib.pyplot as plt
 import os
+import seaborn as sns
 
 class net_graph:
     INFINITY = 100000  # 无限大的边值
@@ -57,6 +59,8 @@ class net_graph:
 
         pos = nx.spring_layout(G, k=5)  # 布局算法
 
+        plt.figure(figsize=(10, 8))
+
         # 绘制节点
         nx.draw_networkx_nodes(G, pos)
         nx.draw_networkx_labels(G, pos, font_size=8)
@@ -75,12 +79,36 @@ class net_graph:
         script_dir = os.path.dirname(os.path.abspath(__file__))
         file_path = os.path.join(script_dir, "network_topology.png")
 
-
         plt.savefig(file_path, format="png", bbox_inches='tight', dpi=500)
-        plt.close()  
+        plt.close()
 
+    def draw_traffic_heatmap(self):
+        # 获取流量矩阵的行列（即节点列表）
+        nodes = list(self.flow.keys())
+
+        # 创建流量矩阵
+        traffic_matrix = []
+        for src in nodes:
+            row = [self.flow[src].get(des, 0) for des in nodes]
+            traffic_matrix.append(row)
+
+        # 使用Seaborn绘制热力图
+        plt.figure(figsize=(10, 8))
+        sns.heatmap(traffic_matrix, xticklabels=nodes, yticklabels=nodes, cmap="YlGnBu", annot=True, fmt="d")
+
+        # 设置标题和标签
+        plt.title("Traffic Matrix Heatmap")
+        plt.xlabel("Destination")
+        plt.ylabel("Source")
+
+        # 保存热力图
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        file_path = os.path.join(script_dir, "traffic_matrix_heatmap.png")
+        plt.savefig(file_path, format="png", bbox_inches='tight', dpi=500)
+        plt.close()
 
 # 示例用法
 if __name__ == "__main__":
     ng = net_graph()
-    ng.draw_graph()
+    ng.draw_graph()  # 绘制网络拓扑
+    ng.draw_traffic_heatmap()  # 绘制流量矩阵热力图

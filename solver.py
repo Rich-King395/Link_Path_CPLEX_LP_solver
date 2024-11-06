@@ -12,8 +12,8 @@ if __name__ == "__main__":
     net.draw_graph()
 
     paths = dict()
-    x = dict()
-    x2src_dst = dict()
+    alpha = dict()
+
     for src in net.flow:
         for des in net.flow[src]:
             paths[(src, des)] = ksp(net, src, des, max_k)
@@ -21,9 +21,7 @@ if __name__ == "__main__":
             for i in range(max_k):
                 name = "source:{}_destination:{}_p{}".format(src, des, i + 1)
                 # x[name] = cplex_obj.variables.add(names=[name], types=['B'])
-                x[name] = cplex_obj.variables.add(names=[name], types=['C'], lb=[0], ub=[1])
-                # each binary variable corresponds to a path
-                x2src_dst[name] = (src, des, i)
+                alpha[name] = cplex_obj.variables.add(names=[name], types=['C'], lb=[0], ub=[1])
 
     # add objective function
     utility = cplex_obj.variables.add(names=["utility"], types=['C'], lb=[0], ub=[1])
@@ -56,14 +54,16 @@ if __name__ == "__main__":
     for src in net.flow:
         for dst in net.flow[src]: 
             # each src only select one path to reach one of its destination 
-            cplex_obj.linear_constraints.add(lin_expr=[[["source:{}_destination:{}_p{}".format(src, dst, i + 1) for i in range(max_k)], [1.0 for i in range(max_k)]]], 
+            lin_expr_vars = ["source:{}_destination:{}_p{}".format(src, dst, i + 1) for i in range(max_k)]
+            lin_expr_coeffs = [1.0 for i in range(max_k)]
+            cplex_obj.linear_constraints.add(lin_expr=[[lin_expr_vars, lin_expr_coeffs]], 
                                              senses=['E'], rhs=[1])
             # cplex_obj.linear_constraints.add(lin_expr=[sum(x["source:{}_destination:{}_p{}".format(src, dst, i + 1)] for i in range(max_k))], senses=['E'], rhs=[1])
 
     # add edge capacity constraints
     for node in net.link_capacity:
         for node_adj in net.link_capacity[node]:
-            lin_expr_vars = [name for name in x.keys()]
+            lin_expr_vars = [name for name in alpha.keys()]
             lin_expr_coeffs = []
             lin_expr_coeffs_2 = []
             for src in net.flow:
